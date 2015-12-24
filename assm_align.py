@@ -123,7 +123,13 @@ def parseAlignReport(fi, assm_name, obj_dict):
 			sp_uniq_loc=[]
 			sp_len=mergeLoc(sp_loc[seq], sp_uniq_loc)
 			obj_dict[seq].set_sp(sp_len, sp_uniq_loc)
-
+		if not seq in sp_only_loc:
+			logging.info("Seq has no SP Only %s: %s" % (assm_name, seq))
+			obj_dict[seq].set_sp_only(0, [])
+		else:
+			sp_only_uniq_loc=[]
+			sp_only_len=mergeLoc(sp_only_loc[seq], sp_only_uniq_loc)
+			obj_dict[seq].set_sp_only(sp_only_len, sp_only_uniq_loc)
 
 
 def parseSeqRep(fi, assm_name, assm_acc):
@@ -204,7 +210,7 @@ def main():
 	##parse alignment report
 	parseAlignReport(assm1['align_rpt'], assm1['name'], assm1_dict)
 	for seq in assm1_dict:
-		print "%s: %d" % (seq, assm1_dict[seq].sp_len)
+		print "%s: %d\t%d" % (seq, assm1_dict[seq].sp_len, assm1_dict[seq].sp_only_len)
 	
 
 	
