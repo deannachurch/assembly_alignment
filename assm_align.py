@@ -12,6 +12,7 @@ from __future__ import division
 import csv
 from collections import defaultdict
 import pybedtools
+from pybedtools import BedTool
 import subprocess
 import numpy as np
 import matplotlib.pylab as plt
@@ -24,12 +25,43 @@ import datetime
 import yaml
 import errno
 
+def getLength(uniq_int, uniq_loc_list):
+	#get length of intervals in a bedtool
+	tot_len = 0
+	for inter in uniq_int:
+		tot_len += inter.stop - inter.start
+		loc="%s:%s-%s" % (inter.chrom, inter.start, inter.stop)
+		uniq_loc_list.append(loc)
+	return tot_len
 
-def parseAlignReport(fi, assm_name):
+
+
+def mergeLoc(loc_list, uniq_loc_list):
+	#For data types where there can be redundancy, we need to merge the locs and then get the lengths
+	tot_len=0
+	loc_str=""
+	for loc in loc_list:
+		(chrom, pre_loc)=loc.split(":")
+		(start, end)=pre_loc.split("-")
+		if not loc_str:
+			loc_str="%s\t%s\t%s" % (chrom, start, end)
+		loc_str="%s\n%s\t%s\t%s" % (loc_str, chrom, start, end)
+	non_uniq=BedTool(loc_str, from_string=True)
+	uniq_int=non_uniq.merge()
+	tot_len=getLength(uniq_int, uniq_loc_list)
+	return tot_len
+	
+
+def parseAlignReport(fi, assm_name, obj_dict):
 	#data structures
 	gap_no_hit = defaultdict(int)
 	ungap_no_hit = defaultdict(int)
 	no_hit_loc = defaultdict(list)
+	sp_loc=defaultdict(list)
+	sp_only_loc=defaultdict(list)
+	inv_loc=defaultdict(list)
+	mix_loc=defaultdict(list)
+	offchrom_loc=defaultdict(list)
 	try:
 		with open(fi, 'r') as infile:
 			data=csv.reader(infile, delimiter="\t")
@@ -59,16 +91,40 @@ def parseAlignReport(fi, assm_name):
 					gap_len = int(line[3])
 					ungap_len = int(line[4])
 					loc="%s:%d-%d" % (seq_name, start, end)
+					#can count no hit locs because there should be no overlap
 					if data_type == "NoHit":
 						gap_no_hit[seq_name] += gap_len
 						ungap_no_hit[seq_name] += ungap_len
 						no_hit_loc[seq_name].append(loc)
+					#all other locs, need to get locs and then uniquify
+					elif data_type == "Inv":
+						inv_loc[seq_name].append(loc)
+					elif data_type == "Mix":
+						mix_loc[seq_name].append(loc)
+					elif data_type == "SP":
+						sp_loc[seq_name].append(loc)
+					elif data_type == "SP Only":
+						sp_only_loc[seq_name].append(loc)
 				
 	except IOError:
 		logging.critical("Can't open %s" % fi)
 		sys.exit(2)
+	#set No hit information for seq_object
+	for seq in obj_dict:
+		if not seq in gap_no_hit:
+			logging.info("Seq has no NoHit %s: %s" % (assm_name, seq))
+			obj_dict[seq].set_nohit(0, 0, [])
+		else:
+			obj_dict[seq].set_nohit(gap_no_hit[seq], ungap_no_hit[seq], no_hit_loc[seq])
+		if not seq in sp_loc:
+			logging.info("Seq has no SP %s: %s" % (assm_name, seq))
+			obj_dict[seq].set_sp(0, [])
+		else:
+			sp_uniq_loc=[]
+			sp_len=mergeLoc(sp_loc[seq], sp_uniq_loc)
+			obj_dict[seq].set_sp(sp_len, sp_uniq_loc)
 
-	print gap_no_hit
+
 
 def parseSeqRep(fi, assm_name, assm_acc):
 	#parse the NCBI seq report to get names, roles, assm-units, etc
@@ -106,9 +162,18 @@ class Seq(object):
 		self.role=""#seq role ('assembled-molecule, 'alt-scaffold', 'unlocalized-scaffold', 'unplaced-scaffold')
 		self.assm_unit=""#assembly unit seq is in 
 
-	def set_nohit(self, length, loc_list):
-		self.no_hit_len=length
+	def set_nohit(self, gap_len, ungap_len, loc_list):
+		self.nohit_len=gap_len
+		self.ungap_nohit_len=ungap_len
 		self.no_hit_list=loc_list
+
+	def set_sp(self, sp_l, sp_list):
+		self.sp_len=sp_l
+		self.sp_list=sp_list
+
+	def set_sp_only(self, sp_only_l, sp_only_list):
+		self.sp_only_len=sp_only_l
+		self.sp_only_list=sp_only_list
 
 
 def main():
@@ -137,7 +202,10 @@ def main():
 	assm2_dict=parseSeqRep(assm2['seq_rpt'], assm2['name'], assm2['acc'])
 	logging.info("Read %s, sequences: %d" % (assm2['name'], len(assm2_dict)))
 	##parse alignment report
-	parseAlignReport(assm1['align_rpt'], assm1['name'])
+	parseAlignReport(assm1['align_rpt'], assm1['name'], assm1_dict)
+	for seq in assm1_dict:
+		print "%s: %d" % (seq, assm1_dict[seq].sp_len)
+	
 
 	
 
