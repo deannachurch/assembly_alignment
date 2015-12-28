@@ -1,0 +1,41 @@
+%YAML 1.2
+---
+#define assm1 and assm2 input files and info here.
+input_files:
+  assm1:
+    acc: GCF_000001405.13
+    name: GRCh37
+    seq_rpt: data/GCF_000001405.13.assembly.txt
+    align_rpt: data/GRCh37-GRCh38.report.txt
+  assm2:
+    acc: GCF_000001405.26
+    name: GRCh38
+    seq_rpt: data/GCF_000001405.26.assembly.txt
+    align_rpt: data/GRCh38-GRCh37.report.txt
+params:
+  exclude_mt: yes
+output_files:
+  #set file name to no to exclude
+  assm1:
+    stats: stats/GRCh37-GRCh38_alignment_stats.txt
+    no_hit_bed: bed/GRCh37-GRCh38_no_hit.bed
+    ungap_no_hit_bed: bed/GRCh37-GRCh38_ungap_no_hit.bed
+    collapse_bed: bed/GRCh37-GRCh38_collapse.bed #sp- both paralogous and allelic for now
+    expand_bed: bed/GRCh37-GRCh38_expansion.bed 
+    inv_bed: bed/GRCh37-GRCh38_inv.bed
+    mix_bed: bed/GRCh37-GRCh38_mix.bed
+  assm2:
+    stats: stats/GRCh38-GRCh37_alignment_stats.txt
+    no_hit_bed: bed/GRCh38-GRCh37_no_hit.bed
+    ungap_no_hit_bed: bed/GRCh38-GRCh37_ungap_no_hit.bed
+    collapse_bed: bed/GRCh38-GRCh37_collapse.bed #sp- both paralogous and allelic for now
+    expand_bed: bed/GRCh38-GRCh37_expansion.bed 
+    inv_bed: bed/GRCh38-GRCh37_inv.bed
+    mix_bed: bed/GRCh38-GRCh37_mix.bed
+  comp_img:
+    both_collapse: img/GRCh37-GRCh37_collapse.png
+    both_expand: img/GRCh37-GRCh38_expand.png
+    both_nohit: img/GRCh37-GRCh38_no_hit.png
+    both_ungap_nohit: img/GRCh37-GRCh38_ungap_no_hit.png
+
+

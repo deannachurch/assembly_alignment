@@ -11,12 +11,13 @@
 from __future__ import division
 import csv
 from collections import defaultdict
+import collections
 import pybedtools
 from pybedtools import BedTool
 import subprocess
 import numpy as np
 import matplotlib.pylab as plt
-#import seaborn as sns
+import seaborn as sns
 import os
 import logging
 import logging.handlers
@@ -24,20 +25,20 @@ from logging import config
 import datetime
 import yaml
 import errno
+import argparse
 
-def getLength(uniq_int, uniq_loc_list):
+def getLength(uniq_loc_list):
 	#get length of intervals in a bedtool
-	tot_len = 0
-	for inter in uniq_int:
-		tot_len += inter.stop - inter.start
-		loc="%s:%s-%s" % (inter.chrom, inter.start, inter.stop)
-		uniq_loc_list.append(loc)
+	tot_len=defaultdict(int)
+	for loc in uniq_loc_list:
+		chrom=loc[0]
+		tot_len[chrom]+= loc[3]		
+	
 	return tot_len
 
-
-
-def mergeLoc(loc_list, uniq_loc_list):
+def mergeLoc(loc_list):
 	#For data types where there can be redundancy, we need to merge the locs and then get the lengths
+	uniq_loc_list=[]
 	tot_len=0
 	loc_str=""
 	for loc in loc_list:
@@ -45,11 +46,14 @@ def mergeLoc(loc_list, uniq_loc_list):
 		(start, end)=pre_loc.split("-")
 		if not loc_str:
 			loc_str="%s\t%s\t%s" % (chrom, start, end)
-		loc_str="%s\n%s\t%s\t%s" % (loc_str, chrom, start, end)
+		else:
+			loc_str="%s\n%s\t%s\t%s" % (loc_str, chrom, start, end)
 	non_uniq=BedTool(loc_str, from_string=True)
 	uniq_int=non_uniq.merge()
-	tot_len=getLength(uniq_int, uniq_loc_list)
-	return tot_len
+	for inter in uniq_int:
+		loc=(inter.chrom, inter.start, inter.stop, inter.stop-inter.start)
+		uniq_loc_list.append(loc)
+	return uniq_loc_list
 	
 
 def parseAlignReport(fi, assm_name, obj_dict):
@@ -109,30 +113,45 @@ def parseAlignReport(fi, assm_name, obj_dict):
 	except IOError:
 		logging.critical("Can't open %s" % fi)
 		sys.exit(2)
-	#set No hit information for seq_object
+	#set alignment attribute information for seq_object
 	for seq in obj_dict:
 		if not seq in gap_no_hit:
-			logging.info("Seq has no NoHit %s: %s" % (assm_name, seq))
+			logging.debug("Seq has no NoHit %s: %s" % (assm_name, seq))
 			obj_dict[seq].set_nohit(0, 0, [])
 		else:
-			obj_dict[seq].set_nohit(gap_no_hit[seq], ungap_no_hit[seq], no_hit_loc[seq])
+			uniq_no_hit_loc=mergeLoc(no_hit_loc[seq])
+			obj_dict[seq].set_nohit(gap_no_hit[seq], ungap_no_hit[seq], uniq_no_hit_loc)
 		if not seq in sp_loc:
-			logging.info("Seq has no SP %s: %s" % (assm_name, seq))
+			logging.debug("Seq has no SP %s: %s" % (assm_name, seq))
 			obj_dict[seq].set_sp(0, [])
 		else:
-			sp_uniq_loc=[]
-			sp_len=mergeLoc(sp_loc[seq], sp_uniq_loc)
-			obj_dict[seq].set_sp(sp_len, sp_uniq_loc)
+			sp_uniq_loc=mergeLoc(sp_loc[seq])
+			sp_len=getLength(sp_uniq_loc)
+			obj_dict[seq].set_sp(sp_len[seq], sp_uniq_loc)
 		if not seq in sp_only_loc:
-			logging.info("Seq has no SP Only %s: %s" % (assm_name, seq))
+			logging.debug("Seq has no SP Only %s: %s" % (assm_name, seq))
 			obj_dict[seq].set_sp_only(0, [])
 		else:
-			sp_only_uniq_loc=[]
-			sp_only_len=mergeLoc(sp_only_loc[seq], sp_only_uniq_loc)
-			obj_dict[seq].set_sp_only(sp_only_len, sp_only_uniq_loc)
+			sp_only_uniq_loc=mergeLoc(sp_only_loc[seq])
+			sp_only_len=getLength(sp_only_uniq_loc)
+			obj_dict[seq].set_sp_only(sp_only_len[seq], sp_only_uniq_loc)
+		if not seq in inv_loc:
+			logging.debug("Seq has no INV data: %s: %s" % (assm_name, seq))
+			obj_dict[seq].set_inv(0,[])
+		else:
+			inv_uniq_loc=mergeLoc(inv_loc[seq])
+			inv_len=getLength(inv_uniq_loc)
+			obj_dict[seq].set_inv(inv_len[seq], inv_uniq_loc)
+		if not seq in mix_loc:
+			logging.debug("Seq has no Mix data: %s: %s" % (assm_name, seq))
+			obj_dict[seq].set_mix(0,[])
+		else:
+			mix_uniq_loc=mergeLoc(mix_loc[seq])
+			mix_len=getLength(mix_uniq_loc)
+			obj_dict[seq].set_mix(mix_len[seq], mix_uniq_loc)
 
 
-def parseSeqRep(fi, assm_name, assm_acc):
+def parseSeqRep(fi, assm_name, assm_acc, chrom_list, exclude_mt):
 	#parse the NCBI seq report to get names, roles, assm-units, etc
 	assm_list={}
 	try:
@@ -151,6 +170,12 @@ def parseSeqRep(fi, assm_name, assm_acc):
 			 		rec.role=line[1]
 			 		rec.assm_unit=line[7]
 			 		assm_list[line[0]]=rec
+			 		if exclude_mt == True:
+			 			if line[1] == 'assembled-molecule' and line[7] == "Primary Assembly":
+			 				chrom_list.append(line[0])
+			 		else:
+			 			if line[1] == 'assembled-molecule':
+			 				chrom_list.append(line[0])
 
 	except IOError:
 		logging.critical("Can't open %s" % fi)
@@ -181,8 +206,103 @@ class Seq(object):
 		self.sp_only_len=sp_only_l
 		self.sp_only_list=sp_only_list
 
+	def set_inv(self, inv_l, inv_loc_l):
+		self.inv_len=inv_l
+		self.inv_loc_list=inv_loc_l
+
+	def set_mix(self, mix_l, mix_loc_l):
+		self.mix_len=mix_l
+		self.mix_loc_list=mix_loc_l
+
+
+def writeStats(fh, assm1, assm2, assm_dict):
+	##stats header
+	date=datetime.datetime.now().strftime("%Y-%m-%d")
+	fh.write("##%s vs %s assembly alignment report\n##%s\n" % (assm1, assm2, date))
+	fh.write("##Overall stats\n")
+	fh.write("#Sequence\tNoHit\tUnGap_NoHit\tCollapse(SP)\tExpansion(SP Only)\tInversion\tMix\n")
+	##by chromosome 
+	nohit_tot=0
+	ungap_nohit_tot=0
+	coll_tot=0
+	exp_tot=0
+	inv_tot=0
+	mix_tot=0
+	seq_list=assm_dict.keys()
+	sort_seq_list=sorted(seq_list, key=lambda item: (int(item.partition(' ')[0]) if item[0].isdigit() else float('inf'), item))
+	for seq in sort_seq_list:
+		obj=assm_dict[seq]
+		nohit_tot += obj.nohit_len
+		ungap_nohit_tot += obj.ungap_nohit_len
+		coll_tot += obj.sp_len
+		exp_tot += obj.sp_only_len
+		inv_tot += obj.inv_len
+		mix_tot += obj.mix_len
+		fh.write("%s\t%d\t%d\t%d\t%d\t%d\t%d\n" % (seq, obj.nohit_len, obj.ungap_nohit_len, obj.sp_len, obj.sp_only_len, obj.inv_len, obj.mix_len))
+	fh.write("total\t%d\t%d\t%d\t%d\t%d\t%d\n" % (nohit_tot, ungap_nohit_tot, coll_tot, exp_tot, inv_tot, mix_tot))
+	##top ten for each category (add later)
+
+def makeBarGraph(assm1_chrom_list, assm1_dict, assm1_name, assm2_chrom_list, assm2_dict, assm2_name, out_fi, data_type):
+	#check that chrom lists are the same- they should be but better to check
+	err=0
+	if [item for item in assm1_chrom_list if item in assm2_chrom_list]:
+		pass
+	else:
+		logging.critical("%s not in both lists" % item)
+		err += 1
+	if err>0:
+		logging.error("Chromosome lists not the same, not making graphic")
+		return 
+	#set up lists for graphing
+	assm1_list=[]
+	assm2_list=[]
+	title=""
+	for seq in assm1_chrom_list:
+		if data_type == "collapse":
+			assm1_list.append(assm1_dict[seq].sp_len)
+			assm2_list.append(assm2_dict[seq].sp_len)
+			title="Collapse sequence: %s and %s" % (assm1_name, assm2_name)
+		elif data_type == "expand":
+			assm1_list.append(assm1_dict[seq].sp_only_len)
+			assm2_list.append(assm2_dict[seq].sp_only_len)
+			title="Expanded sequence: %s and %s" % (assm1_name, assm2_name)
+		elif data_type == "no_hit":
+			assm1_list.append(assm1_dict[seq].nohit_len)
+			assm2_list.append(assm2_dict[seq].nohit_len)
+			title="NoHit sequence: %s and %s" % (assm1_name, assm2_name)
+		elif data_type == "ungap_nohit":
+			assm1_list.append(assm1_dict[seq].ungap_nohit_len)
+			assm2_list.append(assm2_dict[seq].ungap_nohit_len)
+			title="Ungapped NoHit sequence: %s and %s" % (assm1_name, assm2_name)
+		else:
+			logging.error("Unknown data type, not making image: %s" % data_type)
+			return
+	#set up plot
+	sns.set_style("ticks")
+	sns.set_context("talk")
+	plt.figure(figsize=(20,10), dpi=100)
+	ax = plt.gca()
+	ax.get_xaxis().get_major_formatter().set_scientific(False)
+	X = np.arange(len(assm1_chrom_list))
+	width=0.5
+	y1_label=assm1_name
+	y2_label=assm2_name
+	plt.bar(X, assm1_list, width=0.5, facecolor='seagreen', edgecolor='none', label=y1_label)
+	plt.bar(X+0.5, assm2_list, width=0.5, facecolor="blue", edgecolor='none', label=y2_label)
+	plt.xticks(np.arange(len(assm1_list))+0.5, assm1_chrom_list, ha='center', size='22')
+	plt.yticks(size="22")
+	plt.xlabel('sequences', size='36')
+	plt.ylabel('number of bases', size='36')
+	plt.title(title, size='36')
+	plt.legend(loc='upper left', prop={'size':24})
+	sns.despine(top=True, right=True)
+	plt.savefig(out_fi, dpi=100)
 
 def main():
+	#parse parameters
+	parser = argparse.ArgumentParser(description="assm_align.py: process NCBI assm-assm alignments (also needs sequence report files)")
+	parser.add_argument("--config", dest='cfg_file', help="path to config file (default is resources/assm_align_cfg.yml)")
+	args = parser.parse_args()
 	#set up logging
 	try:
 		os.makedirs("log")
@@ -199,22 +319,60 @@ def main():
 	logger.info("================assm_align.py started: log file=%s================" % log_file)
 	
 	##read config file and get file parameters
-	cfg_dict=yaml.load(open("resources/assm_align_cfg.yml", 'r'))
+	cfg_file=args.cfg_file
+	if not cfg_file:
+		cfg_file="resources/assm_align_cfg.yml"
+	cfg_dict=yaml.load(open(cfg_file, 'r'))
 	assm1=cfg_dict['input_files']['assm1']
 	assm2=cfg_dict['input_files']['assm2']
+	exclude_mt=cfg_dict['params']['exclude_mt']
 	##create sequence objects
-	assm1_dict=parseSeqRep(assm1['seq_rpt'], assm1['name'], assm1['acc'])
-	logging.info("Read %s, sequences: %d" % (assm1['name'], len(assm1_dict)))
-	assm2_dict=parseSeqRep(assm2['seq_rpt'], assm2['name'], assm2['acc'])
-	logging.info("Read %s, sequences: %d" % (assm2['name'], len(assm2_dict)))
+	#list to get sequence order of 'chrom' correct
+	assm1_chrom_list=[]
+	assm2_chrom_list=[]
+	assm1_dict=parseSeqRep(assm1['seq_rpt'], assm1['name'], assm1['acc'], assm1_chrom_list, exclude_mt)
+	logging.info("Read %s, sequences: %d, chromosomes: %d" % (assm1['name'], len(assm1_dict), len(assm1_chrom_list)))
+	assm2_dict=parseSeqRep(assm2['seq_rpt'], assm2['name'], assm2['acc'], assm2_chrom_list, exclude_mt)
+	logging.info("Read %s, sequences: %d, chromosomes: %d" % (assm2['name'], len(assm2_dict), len(assm2_chrom_list)))
 	##parse alignment report
+	logging.info("Processing %s" % assm1['name'])
 	parseAlignReport(assm1['align_rpt'], assm1['name'], assm1_dict)
-	for seq in assm1_dict:
-		print "%s: %d\t%d" % (seq, assm1_dict[seq].sp_len, assm1_dict[seq].sp_only_len)
-	
+	logging.info("Procssing %s" % assm2['name'])
+	parseAlignReport(assm2['align_rpt'], assm2['name'], assm2_dict)
+	##produce stats
+	assm1_stats_out=cfg_dict['output_files']['assm1']['stats']
+	if not assm1_stats_out == False:
+		logging.info("Writing stats file: %s" % assm1_stats_out)
+		stats1_out=open(assm1_stats_out, 'w')
+		writeStats(stats1_out, assm1['name'], assm2['name'], assm1_dict)
+		stats1_out.close()
+	assm2_stats_out=cfg_dict['output_files']['assm2']['stats']
+	if not assm2_stats_out == False:
+		logging.info("Writing stats file: %s" % assm2_stats_out)
+		stats2_out=open(assm2_stats_out, 'w')
+		writeStats(stats2_out, assm2['name'], assm1['name'], assm2_dict)
+		stats2_out.close()
+	##produce bed files if desired
 
-	
-
+	##produce graphs is desired, and only if chromosomes are available
+	if len(assm1_chrom_list)>0 and len(assm2_chrom_list) >0:
+		logging.info("Starting image production as both assemblies have chromosomes")
+		collapse_img=cfg_dict['output_files']['comp_img']['both_collapse']
+		expand_img=cfg_dict['output_files']['comp_img']['both_expand']
+		nohit_img=cfg_dict['output_files']['comp_img']['both_nohit']
+		ungap_nohit_img=cfg_dict['output_files']['comp_img']['both_ungap_nohit']
+		if not collapse_img == False:
+			logging.info("Making collapse image")
+			makeBarGraph(assm1_chrom_list, assm1_dict, assm1['name'], assm2_chrom_list, assm2_dict, assm2['name'], collapse_img, "collapse")
+		if not expand_img == False:
+			logging.info("Making expansion image")
+			makeBarGraph(assm1_chrom_list, assm1_dict, assm1['name'], assm2_chrom_list, assm2_dict, assm2['name'], expand_img, "expand")
+		if not nohit_img == False:
+			logging.info("Making no hit image")
+			makeBarGraph(assm1_chrom_list, assm1_dict, assm1['name'], assm2_chrom_list, assm2_dict, assm2['name'], nohit_img, "no_hit")
+		if not ungap_nohit_img == False:
+			logging.info("Making ungap no hit image")
+			makeBarGraph(assm1_chrom_list, assm1_dict, assm1['name'], assm2_chrom_list, assm2_dict, assm2['name'], ungap_nohit_img, "ungap_nohit")
 
 
 if __name__=="__main__":
