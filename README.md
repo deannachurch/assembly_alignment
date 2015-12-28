@@ -5,9 +5,9 @@ Preliminary assembly-assembly alignment analysis
 Currently supports:
 * creating a stats table with 1 row per assembly sequence with numbers per alignment discrepancy type
 * if the assembly has chromosomes, make graphs.
+* Creates per assembly bed files for each discrepancy type
 
 To do: 
-* create bed files for each alignmnet discrepancy type
 * update stats to add the top ten by size for each even type
 
 To run: 

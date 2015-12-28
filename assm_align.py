@@ -90,7 +90,7 @@ def parseAlignReport(fi, assm_name, obj_dict):
 					#data lines
 					#print line
 					data_type=line[0]
-					start = int(line[1])
+					start = int(line[1])-1
 					end = int(line[2])
 					gap_len = int(line[3])
 					ungap_len = int(line[4])
@@ -214,6 +214,34 @@ class Seq(object):
 		self.mix_len=mix_l
 		self.mix_loc_list=mix_loc_l
 
+def makeBed(out_file, assm_dict, data_type):
+	out_str=out_file.split(".")[0].split("/")[1]
+	out=open(out_file, 'w')
+	out.write("track name=%s\n" % out_str)
+	seq_list=assm_dict.keys()
+	sort_seq_list=sorted(seq_list, key=lambda item: (int(item.partition(' ')[0]) if item[0].isdigit() else float('inf'), item))
+	loc_list=[]
+	if data_type == "nohit":
+		for seq in sort_seq_list:
+			loc_list.extend(assm_dict[seq].no_hit_list)
+	elif data_type == "collapse":
+		for seq in sort_seq_list:
+			loc_list.extend(assm_dict[seq].sp_list)
+	elif data_type == "expand":
+		for seq in sort_seq_list:
+			loc_list.extend(assm_dict[seq].sp_only_list)
+	elif data_type == "inv":
+		for seq in sort_seq_list:
+			loc_list.extend(assm_dict[seq].inv_loc_list)
+	elif data_type == "mix":
+		for seq in sort_seq_list:
+			loc_list.extend(assm_dict[seq].mix_loc_list)
+	else:
+		logging.error("Unknown data type, abandoning bed: %s" % data_type)
+
+	for loc in loc_list:
+		out.write("%s\t%d\t%d\n" % (loc[0], loc[1], loc[2]))
+	out.close()
 
 def writeStats(fh, assm1, assm2, assm_dict):
 	##stats header
@@ -353,6 +381,30 @@ def main():
 		writeStats(stats2_out, assm2['name'], assm1['name'], assm2_dict)
 		stats2_out.close()
 	##produce bed files if desired
+	##I'm sure there is a better way, but brute forcing it now
+	if cfg_dict['params']['make_bed'] == True:
+		assm1_nohit_bed=cfg_dict['output_files']['assm1']['no_hit_bed']
+		assm1_collapse_bed=cfg_dict['output_files']['assm1']['collapse_bed']
+		assm1_expand_bed=cfg_dict['output_files']['assm1']['expand_bed']
+		assm1_inv_bed=cfg_dict['output_files']['assm1']['inv_bed']
+		assm1_mix_bed=cfg_dict['output_files']['assm1']['mix_bed']
+		logging.info("Making assembly 1 beds")
+		makeBed(assm1_nohit_bed, assm1_dict, "nohit")
+		makeBed(assm1_collapse_bed, assm1_dict, "collapse")
+		makeBed(assm1_expand_bed, assm1_dict, "expand")
+		makeBed(assm1_inv_bed, assm1_dict, "inv")
+		makeBed(assm1_mix_bed, assm1_dict, "mix")
+		assm2_nohit_bed=cfg_dict['output_files']['assm2']['no_hit_bed']
+		assm2_collapse_bed=cfg_dict['output_files']['assm2']['collapse_bed']
+		assm2_expand_bed=cfg_dict['output_files']['assm2']['expand_bed']
+		assm2_inv_bed=cfg_dict['output_files']['assm2']['inv_bed']
+		assm2_mix_bed=cfg_dict['output_files']['assm2']['mix_bed']
+		logging.info("Making assembly 2 beds")
+		makeBed(assm2_nohit_bed, assm2_dict, "nohit")
+		makeBed(assm2_collapse_bed, assm2_dict, "collapse")
+		makeBed(assm2_expand_bed, assm2_dict, "expand")
+		makeBed(assm2_inv_bed, assm2_dict, "inv")
+		makeBed(assm2_mix_bed, assm2_dict, "mix")
 
 	##produce graphs is desired, and only if chromosomes are available
 	if len(assm1_chrom_list)>0 and len(assm2_chrom_list) >0:
