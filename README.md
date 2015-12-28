@@ -14,21 +14,22 @@ To run:
 Create a config file specifying path to files and files to create
 
 Dependencies:
-from __future__ import division
-import csv
-from collections import defaultdict
-import collections
-import pybedtools
-from pybedtools import BedTool
-import subprocess
-import numpy as np
-import matplotlib.pylab as plt
-import seaborn as sns
-import os
-import logging
-import logging.handlers
-from logging import config
-import datetime
-import yaml
-import errno
-import argparse
+
+* from __future__ import division
+* import csv
+* from collections import defaultdict
+* import collections
+* import pybedtools
+* from pybedtools import BedTool
+* import subprocess
+* import numpy as np
+* import matplotlib.pylab as plt
+* import seaborn as sns
+* import os
+* import logging
+* import logging.handlers
+* from logging import config
+* import datetime
+* import yaml
+* import errno
+* import argparse
