@@ -93,7 +93,7 @@ def parseAlignReport(fi, assm_name, obj_dict):
 					start = int(line[1])-1
 					end = int(line[2])
 					gap_len = int(line[3])
-					ungap_len = int(line[4])
+					ungap_len = int(line[5])
 					loc="%s:%d-%d" % (seq_name, start, end)
 					#can count no hit locs because there should be no overlap
 					if data_type == "NoHit":
