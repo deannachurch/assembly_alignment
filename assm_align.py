@@ -219,7 +219,12 @@ def makeBed(out_file, assm_dict, data_type):
 	out=open(out_file, 'w')
 	out.write("track name=%s\n" % out_str)
 	seq_list=assm_dict.keys()
-	sort_seq_list=sorted(seq_list, key=lambda item: (int(item.partition(' ')[0]) if item[0].isdigit() else float('inf'), item))
+	#sort list alphanumerically, it looks like the complex sort barfs on non-GRC assemblies- trying work around.
+	#I should do this in the class so I don't have to do it twice in the code. 
+	try:
+		sort_seq_list=sorted(seq_list, key=lambda item: (int(item.partition(' ')[0]) if item[0].isdigit() else float('inf'), item))
+	except:
+		sort_seq_list=sorted(seq_list)
 	loc_list=[]
 	if data_type == "nohit":
 		for seq in sort_seq_list:
@@ -257,7 +262,11 @@ def writeStats(fh, assm1, assm2, assm_dict):
 	inv_tot=0
 	mix_tot=0
 	seq_list=assm_dict.keys()
-	sort_seq_list=sorted(seq_list, key=lambda item: (int(item.partition(' ')[0]) if item[0].isdigit() else float('inf'), item))
+	#sort list alphanumerically, it looks like the complex sort barfs on non-GRC assemblies- trying work around.
+	try:
+		sort_seq_list=sorted(seq_list, key=lambda item: (int(item.partition(' ')[0]) if item[0].isdigit() else float('inf'), item))
+	except:
+		sort_seq_list=sorted(seq_list)
 	for seq in sort_seq_list:
 		obj=assm_dict[seq]
 		nohit_tot += obj.nohit_len

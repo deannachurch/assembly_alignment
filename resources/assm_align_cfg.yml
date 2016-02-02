@@ -3,38 +3,38 @@
 #define assm1 and assm2 input files and info here.
 input_files:
   assm1:
-    acc: GCF_000001405.13
-    name: GRCh37
-    seq_rpt: data/GCF_000001405.13.assembly.txt
-    align_rpt: data/GRCh37-GRCh38.report.txt
+    acc: GCA_001297185.1
+    name: PacBioCHM1_r2_GenBank_08312015
+    seq_rpt: data/GCA_001297185.1.assembly.txt
+    align_rpt: data/GCA_001297185.1-GCF_000001405.26.report
   assm2:
     acc: GCF_000001405.26
     name: GRCh38
     seq_rpt: data/GCF_000001405.26.assembly.txt
-    align_rpt: data/GRCh38-GRCh37.report.txt
+    align_rpt: data/GCF_000001405.26-GCA_001297185.1.report
 params:
   exclude_mt: yes
   make_bed: yes
 output_files:
   #set file name to no to exclude
   assm1:
-    stats: stats/GRCh37-GRCh38_alignment_stats.txt
-    no_hit_bed: bed/GRCh37-GRCh38_no_hit.bed
-    collapse_bed: bed/GRCh37-GRCh38_collapse.bed #sp- both paralogous and allelic for now
-    expand_bed: bed/GRCh37-GRCh38_expansion.bed 
-    inv_bed: bed/GRCh37-GRCh38_inv.bed
-    mix_bed: bed/GRCh37-GRCh38_mix.bed
+    stats: stats/GCA_001297185.1-GCF_000001405.26_alignment_stats.txt
+    no_hit_bed: bed/GCA_001297185.1-GCF_000001405.26_no_hit.bed
+    collapse_bed: bed/GCA_001297185.1-GCF_000001405.26_collapse.bed #sp- both paralogous and allelic for now
+    expand_bed: bed/GCA_001297185.1-GCF_000001405.26_expansion.bed 
+    inv_bed: bed/GCA_001297185.1-GCF_000001405.26_inv.bed
+    mix_bed: bed/GCA_001297185.1-GCF_000001405.26_mix.bed
   assm2:
-    stats: stats/GRCh38-GRCh37_alignment_stats.txt
-    no_hit_bed: bed/GRCh38-GRCh37_no_hit.bed
-    collapse_bed: bed/GRCh38-GRCh37_collapse.bed #sp- both paralogous and allelic for now
-    expand_bed: bed/GRCh38-GRCh37_expansion.bed 
-    inv_bed: bed/GRCh38-GRCh37_inv.bed
-    mix_bed: bed/GRCh38-GRCh37_mix.bed
+    stats: stats/GCF_000001405.26-GCA_001297185.1_alignment_stats.txt
+    no_hit_bed: bed/GCF_000001405.26-GCA_001297185.1_no_hit.bed
+    collapse_bed: bed/GCF_000001405.26-GCA_001297185.1_collapse.bed #sp- both paralogous and allelic for now
+    expand_bed: bed/GCF_000001405.26-GCA_001297185.1_expansion.bed 
+    inv_bed: bed/GCF_000001405.26-GCA_001297185.1_inv.bed
+    mix_bed: bed/GCF_000001405.26-GCA_001297185.1_mix.bed
   comp_img:
-    both_collapse: img/GRCh37-GRCh37_collapse.png
-    both_expand: img/GRCh37-GRCh38_expand.png
-    both_nohit: img/GRCh37-GRCh38_no_hit.png
-    both_ungap_nohit: img/GRCh37-GRCh38_ungap_no_hit.png
+    both_collapse: img/GCA_001297185.1-GCF_000001405.26_collapse.png
+    both_expand: img/GCA_001297185.1-GCF_000001405.26_expand.png
+    both_nohit: img/GCA_001297185.1-GCF_000001405.26_no_hit.png
+    both_ungap_nohit: img/GCA_001297185.1-GCF_000001405.26_ungap_no_hit.png
 
 
