@@ -3,7 +3,7 @@
 #
 #  Process assm-assm alignment files to get stats
 #  For now using a config to point to relevant files (rather than parameters)
-#  
+#
 #  Deanna M. Church
 #  23 Dec, 2015
 #
@@ -19,6 +19,7 @@ import numpy as np
 import matplotlib.pylab as plt
 import seaborn as sns
 import os
+import sys
 import logging
 import logging.handlers
 from logging import config
@@ -32,8 +33,8 @@ def getLength(uniq_loc_list):
 	tot_len=defaultdict(int)
 	for loc in uniq_loc_list:
 		chrom=loc[0]
-		tot_len[chrom]+= loc[3]		
-	
+		tot_len[chrom]+= loc[3]
+
 	return tot_len
 
 def mergeLoc(loc_list):
@@ -54,7 +55,7 @@ def mergeLoc(loc_list):
 		loc=(inter.chrom, inter.start, inter.stop, inter.stop-inter.start)
 		uniq_loc_list.append(loc)
 	return uniq_loc_list
-	
+
 
 def parseAlignReport(fi, assm_name, obj_dict):
 	#data structures
@@ -109,7 +110,7 @@ def parseAlignReport(fi, assm_name, obj_dict):
 						sp_loc[seq_name].append(loc)
 					elif data_type == "SP Only":
 						sp_only_loc[seq_name].append(loc)
-				
+
 	except IOError:
 		logging.critical("Can't open %s" % fi)
 		sys.exit(2)
@@ -191,7 +192,7 @@ class Seq(object):
 		self.ref_acc=""#sequence refseq accession.version
 		self.length=0#sequence length
 		self.role=""#seq role ('assembled-molecule, 'alt-scaffold', 'unlocalized-scaffold', 'unplaced-scaffold')
-		self.assm_unit=""#assembly unit seq is in 
+		self.assm_unit=""#assembly unit seq is in
 
 	def set_nohit(self, gap_len, ungap_len, loc_list):
 		self.nohit_len=gap_len
@@ -220,7 +221,7 @@ def makeBed(out_file, assm_dict, data_type):
 	out.write("track name=%s\n" % out_str)
 	seq_list=assm_dict.keys()
 	#sort list alphanumerically, it looks like the complex sort barfs on non-GRC assemblies- trying work around.
-	#I should do this in the class so I don't have to do it twice in the code. 
+	#I should do this in the class so I don't have to do it twice in the code.
 	try:
 		sort_seq_list=sorted(seq_list, key=lambda item: (int(item.partition(' ')[0]) if item[0].isdigit() else float('inf'), item))
 	except:
@@ -254,7 +255,7 @@ def writeStats(fh, assm1, assm2, assm_dict):
 	fh.write("##%s vs %s assembly alignment report\n##%s\n" % (assm1, assm2, date))
 	fh.write("##Overall stats\n")
 	fh.write("#Sequence\tNoHit\tUnGap_NoHit\tCollapse(SP)\tExpansion(SP Only)\tInversion\tMix\n")
-	##by chromosome 
+	##by chromosome
 	nohit_tot=0
 	ungap_nohit_tot=0
 	coll_tot=0
@@ -289,7 +290,7 @@ def makeBarGraph(assm1_chrom_list, assm1_dict, assm1_name, assm2_chrom_list, ass
 		err += 1
 	if err>0:
 		logging.error("Chromosome lists not the same, not making graphic")
-		return 
+		return
 	#set up lists for graphing
 	assm1_list=[]
 	assm2_list=[]
@@ -354,7 +355,7 @@ def main():
 	logging.config.dictConfig(config_dict)
 	logger=logging.getLogger()
 	logger.info("================assm_align.py started: log file=%s================" % log_file)
-	
+
 	##read config file and get file parameters
 	cfg_file=args.cfg_file
 	if not cfg_file:
