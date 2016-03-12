@@ -41,10 +41,5 @@ class check_getLength(unittest.TestCase):
 	def test_getLen2(self):
 		self.assertEqual(getLength(self.loc_list2), self.len2)
 
-
-
-
-
-
 if __name__ == '__main__':
 	unittest.main()
