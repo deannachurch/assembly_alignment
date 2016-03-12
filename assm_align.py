@@ -222,6 +222,53 @@ class Seq(object):
 		self.mix_len=mix_l
 		self.mix_loc_list=mix_loc_l
 
+def writeTopTenLine(fh, loc_list):
+	fh.write("#chr\tstart\tstop\tlen\n")
+	for loc in loc_list:
+		fh.write("%s\t%d\t%d\t%d\n" % (loc[0], loc[1], loc[2], loc[3]))
+
+def writeTopTen(fh, assm1, assm2, assm_dict):
+	date=datetime.datetime.now().strftime("%Y-%m-%d")
+	fh.write("##%s vs %s assembly alignment report\n##%s\n" % (assm1, assm2, date))
+	fh.write("##Top ten by category.\n")
+	nohit=[]
+	#ungap_nohit=[]
+	sp=[]
+	sp_only=[]
+	inv=[]
+	mix=[]
+	for seq in assm_dict:
+		nohit.extend(assm_dict[seq].no_hit_list)
+		sp.extend(assm_dict[seq].sp_list)
+		sp_only.extend(assm_dict[seq].sp_only_list)
+		inv.extend(assm_dict[seq].inv_loc_list)
+		mix.extend(assm_dict[seq].mix_loc_list)
+	#no hit
+	sort_nohit=sorted(nohit, key=lambda x: x[3], reverse=True)
+	sort_nohit_ten=sort_nohit[:10]
+	fh.write("##No Hit\n")
+	writeTopTenLine(fh, sort_nohit_ten)
+	#sp
+	sort_sp=sorted(sp, key=lambda x: x[3], reverse=True)
+	sort_sp_ten=sort_sp[:10]
+	fh.write("\n#SP\n")
+	writeTopTenLine(fh, sort_sp_ten)
+	#sp_only
+	sort_sp_only=sorted(sp, key=lambda x: x[3], reverse=True)
+	sort_sp_only_ten=sort_sp_only[:10]
+	fh.write("\n#SP_only\n")
+	writeTopTenLine(fh, sort_sp_only_ten)
+	#inv
+	sort_inv=sorted(inv, key=lambda x: x[3], reverse=True)
+	sort_inv_ten=sort_inv[:10]
+	fh.write("\nInv\n")
+	writeTopTenLine(fh, sort_inv_ten)
+	#mix
+	sort_mix=sorted(inv, key=lambda x: x[3], reverse=True)
+	sort_mix_ten=sort_mix[:10]
+	fh.write("\nMix\n")
+	writeTopTenLine(fh, sort_mix_ten)
+
 def makeBed(out_file, assm_dict, data_type):
 	out_str=out_file.split(".")[0].split("/")[1]
 	out=open(out_file, 'w')
@@ -391,6 +438,19 @@ def main():
 		stats2_out=open(assm2_stats_out, 'w')
 		writeStats(stats2_out, assm2['name'], assm1['name'], assm2_dict)
 		stats2_out.close()
+	##make top ten file
+	assm1_top_ten_out=cfg_dict['output_files']['assm1']['top_ten']
+	if not assm1_top_ten_out == False:
+		logging.info("Writing top ten file: %s" % assm1_top_ten_out)
+		top_ten1_out=open(assm1_top_ten_out, 'w')
+		writeTopTen(top_ten1_out, assm1['name'], assm2['name'], assm1_dict)
+		top_ten1_out.close()
+	assm2_top_ten_out=cfg_dict['output_files']['assm2']['top_ten']
+	if not assm2_top_ten_out == False:
+		logging.info("Writing top ten file: %s" % assm2_top_ten_out)
+		top_ten2_out=open(assm2_top_ten_out, 'w')
+		writeTopTen(top_ten2_out, assm2['name'], assm1['name'], assm2_dict)
+		top_ten2_out.close()
 	##produce bed files if desired
 	##I'm sure there is a better way, but brute forcing it now
 	if cfg_dict['params']['make_bed'] == True:

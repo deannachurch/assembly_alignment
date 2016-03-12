@@ -19,6 +19,7 @@ output_files:
   #set file name to no to exclude
   assm1:
     stats: stats/GRCh37-GRCh38_alignment_stats.txt
+    top_ten: stats/GRCh37-GRCh38_top_ten.txt
     no_hit_bed: bed/GRCh37-GRCh38_no_hit.bed
     collapse_bed: bed/GRCh37-GRCh38_collapse.bed #sp- both paralogous and allelic for now
     expand_bed: bed/GRCh37-GRCh38_expansion.bed
@@ -26,6 +27,7 @@ output_files:
     mix_bed: bed/GRCh37-GRCh38_mix.bed
   assm2:
     stats: stats/GRCh38-GRCh37-alignment_stats.txt
+    top_ten: stats/GRCh38-GRCh38_top_ten.txt
     no_hit_bed: bed/GRCh38-GRCh37_no_hit.bed
     collapse_bed: bed/GRCh38-GRCh37_collapse.bed #sp- both paralogous and allelic for now
     expand_bed: bed/GRCh38-GRCh37_expansion.bed
