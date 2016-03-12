@@ -69,6 +69,8 @@ def parseAlignReport(fi, assm_name, obj_dict):
 	gap_no_hit = defaultdict(int)
 	ungap_no_hit = defaultdict(int)
 	no_hit_loc = defaultdict(list)
+	#will store ungap no hit if <50% of loc is N
+	ungap_no_hit_loc=defaultdict(list)
 	sp_loc=defaultdict(list)
 	sp_only_loc=defaultdict(list)
 	inv_loc=defaultdict(list)
@@ -108,6 +110,9 @@ def parseAlignReport(fi, assm_name, obj_dict):
 						gap_no_hit[seq_name] += gap_len
 						ungap_no_hit[seq_name] += ungap_len
 						no_hit_loc[seq_name].append(loc)
+						#store unap loc if <50% of the loc is N
+						if (ungap_len/gap_len >.5):
+							ungap_no_hit_loc[seq_name].append(loc)
 					#all other locs, need to get locs and then uniquify
 					elif data_type == "Inv":
 						inv_loc[seq_name].append(loc)
@@ -125,10 +130,11 @@ def parseAlignReport(fi, assm_name, obj_dict):
 	for seq in obj_dict:
 		if not seq in gap_no_hit:
 			logging.debug("Seq has no NoHit %s: %s" % (assm_name, seq))
-			obj_dict[seq].set_nohit(0, 0, [])
+			obj_dict[seq].set_nohit(0, 0, [], [])
 		else:
 			uniq_no_hit_loc=mergeLoc(no_hit_loc[seq])
-			obj_dict[seq].set_nohit(gap_no_hit[seq], ungap_no_hit[seq], uniq_no_hit_loc)
+			uniq_ungap_no_hit_loc=mergeLoc(ungap_no_hit_loc[seq])
+			obj_dict[seq].set_nohit(gap_no_hit[seq], ungap_no_hit[seq], uniq_no_hit_loc, uniq_ungap_no_hit_loc)
 		if not seq in sp_loc:
 			logging.debug("Seq has no SP %s: %s" % (assm_name, seq))
 			obj_dict[seq].set_sp(0, [])
@@ -201,10 +207,11 @@ class Seq(object):
 		self.role=""#seq role ('assembled-molecule, 'alt-scaffold', 'unlocalized-scaffold', 'unplaced-scaffold')
 		self.assm_unit=""#assembly unit seq is in
 
-	def set_nohit(self, gap_len, ungap_len, loc_list):
+	def set_nohit(self, gap_len, ungap_len, loc_list, ungap_loc_list):
 		self.nohit_len=gap_len
 		self.ungap_nohit_len=ungap_len
 		self.no_hit_list=loc_list
+		self.ungap_no_hit_list=ungap_loc_list
 
 	def set_sp(self, sp_l, sp_list):
 		self.sp_len=sp_l
@@ -232,13 +239,14 @@ def writeTopTen(fh, assm1, assm2, assm_dict):
 	fh.write("##%s vs %s assembly alignment report\n##%s\n" % (assm1, assm2, date))
 	fh.write("##Top ten by category.\n")
 	nohit=[]
-	#ungap_nohit=[]
+	ungap_nohit=[]
 	sp=[]
 	sp_only=[]
 	inv=[]
 	mix=[]
 	for seq in assm_dict:
 		nohit.extend(assm_dict[seq].no_hit_list)
+		ungap_nohit.extend(assm_dict[seq].ungap_no_hit_list)
 		sp.extend(assm_dict[seq].sp_list)
 		sp_only.extend(assm_dict[seq].sp_only_list)
 		inv.extend(assm_dict[seq].inv_loc_list)
@@ -248,25 +256,30 @@ def writeTopTen(fh, assm1, assm2, assm_dict):
 	sort_nohit_ten=sort_nohit[:10]
 	fh.write("##No Hit\n")
 	writeTopTenLine(fh, sort_nohit_ten)
+	#ungap no Hit
+	sort_ungap_nohit=sorted(ungap_nohit, key=lambda x: x[3], reverse=True)
+	sort_ungap_nohit_ten=sort_ungap_nohit[:10]
+	fh.write("\n##Ungap No Hit\n")
+	writeTopTenLine(fh, sort_ungap_nohit_ten)
 	#sp
 	sort_sp=sorted(sp, key=lambda x: x[3], reverse=True)
 	sort_sp_ten=sort_sp[:10]
-	fh.write("\n#SP\n")
+	fh.write("\n##SP\n")
 	writeTopTenLine(fh, sort_sp_ten)
 	#sp_only
 	sort_sp_only=sorted(sp, key=lambda x: x[3], reverse=True)
 	sort_sp_only_ten=sort_sp_only[:10]
-	fh.write("\n#SP_only\n")
+	fh.write("\n##SP_only\n")
 	writeTopTenLine(fh, sort_sp_only_ten)
 	#inv
 	sort_inv=sorted(inv, key=lambda x: x[3], reverse=True)
 	sort_inv_ten=sort_inv[:10]
-	fh.write("\nInv\n")
+	fh.write("\n##Inv\n")
 	writeTopTenLine(fh, sort_inv_ten)
 	#mix
 	sort_mix=sorted(inv, key=lambda x: x[3], reverse=True)
 	sort_mix_ten=sort_mix[:10]
-	fh.write("\nMix\n")
+	fh.write("\n##Mix\n")
 	writeTopTenLine(fh, sort_mix_ten)
 
 def makeBed(out_file, assm_dict, data_type):
@@ -293,6 +306,9 @@ def makeBed(out_file, assm_dict, data_type):
 	elif data_type == "mix":
 		for seq in sort_seq_list:
 			loc_list.extend(assm_dict[seq].mix_loc_list)
+	elif data_type == "ungap_nohit":
+		for seq in sort_seq_list:
+			loc_list.extend(assm_dict[seq].ungap_no_hit_list)
 	else:
 		logging.error("Unknown data type, abandoning bed: %s" % data_type)
 
@@ -455,23 +471,27 @@ def main():
 	##I'm sure there is a better way, but brute forcing it now
 	if cfg_dict['params']['make_bed'] == True:
 		assm1_nohit_bed=cfg_dict['output_files']['assm1']['no_hit_bed']
+		assm1_ungap_nohit_bed=cfg_dict['output_files']['assm1']['ungap_nohit_bed']
 		assm1_collapse_bed=cfg_dict['output_files']['assm1']['collapse_bed']
 		assm1_expand_bed=cfg_dict['output_files']['assm1']['expand_bed']
 		assm1_inv_bed=cfg_dict['output_files']['assm1']['inv_bed']
 		assm1_mix_bed=cfg_dict['output_files']['assm1']['mix_bed']
 		logging.info("Making assembly 1 beds")
 		makeBed(assm1_nohit_bed, assm1_dict, "nohit")
+		makeBed(assm1_ungap_nohit_bed, assm1_dict, "ungap_nohit")
 		makeBed(assm1_collapse_bed, assm1_dict, "collapse")
 		makeBed(assm1_expand_bed, assm1_dict, "expand")
 		makeBed(assm1_inv_bed, assm1_dict, "inv")
 		makeBed(assm1_mix_bed, assm1_dict, "mix")
 		assm2_nohit_bed=cfg_dict['output_files']['assm2']['no_hit_bed']
+		assm2_ungap_nohit_bed=cfg_dict['output_files']['assm2']['ungap_nohit_bed']
 		assm2_collapse_bed=cfg_dict['output_files']['assm2']['collapse_bed']
 		assm2_expand_bed=cfg_dict['output_files']['assm2']['expand_bed']
 		assm2_inv_bed=cfg_dict['output_files']['assm2']['inv_bed']
 		assm2_mix_bed=cfg_dict['output_files']['assm2']['mix_bed']
 		logging.info("Making assembly 2 beds")
 		makeBed(assm2_nohit_bed, assm2_dict, "nohit")
+		makeBed(assm2_nohit_bed, assm2_dict, "ungap_nohit")
 		makeBed(assm2_collapse_bed, assm2_dict, "collapse")
 		makeBed(assm2_expand_bed, assm2_dict, "expand")
 		makeBed(assm2_inv_bed, assm2_dict, "inv")
