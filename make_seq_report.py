@@ -1,7 +1,7 @@
+#!/usr/bin/env python
 import csv
 import argparse
 from Bio import SeqIO
-from collections import defaultdict
 
 def getLen(fi):
     len_hash={}
@@ -11,12 +11,12 @@ def getLen(fi):
 
 def main():
     parser = argparse.ArgumentParser(description="make_seq_report.py: create seq report for assembly when NCBI omits this")
-	parser.add_argument("--fasta", dest="fasta_file", help="path to fasta file")
+    parser.add_argument("--fasta", dest="fasta_file", help="path to fasta file")
     parser.add_argument("--asm_name", dest="asm_name", help="assembly name")
     parser.add_argument("--outdir", dest="outdir", help="output directory")
-	args = parser.parse_args()
+    args = parser.parse_args()
     asm_name=args.asm_name
-    fasta=args.fasta
+    fasta=args.fasta_file
     outdir=args.outdir
     #get sequence lengths
     seq_len={}
@@ -29,7 +29,7 @@ def main():
     out.write("#Assumptions: Scaffold level assembly, only primary unit\n")
     out.write("#Sequence-name\tSequence-Role\tAssigned-Molecule\tAssigned-Molecule-Location/Type\tGenBank-Accn\tRelationship\tRefSeq-Accn\tAssembly-Unit\tSequence-Length\tUCSC-style-name\n")
     for seq in seq_len:
-        out.write("%s\unlocalized-scaffold\tNA\tNA\tNA\tNA\tNA\tPrimary Assembly\t%d\tNA\n" % (seq, seq_len[seq]))
+        out.write("%s\tunlocalized-scaffold\tNA\tNA\tNA\tNA\tNA\tPrimary Assembly\t%d\tNA\n" % (seq, seq_len[seq]))
     out.close()
 
 

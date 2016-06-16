@@ -1,0 +1,44 @@
+%YAML 1.2
+---
+#define assm1 and assm2 input files and info here.
+# if there are not assembly accessions, use NOACC_name
+
+input_files:
+  assm1:
+    acc: NOACC_NA12878_hap0
+    name: haplotype_0
+    seq_rpt: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/NA12878_hap0.assembly.txt"
+    align_rpt: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/haplotype_0-GCF_000001405.26.report"
+  assm2:
+    acc: GCF_000001405.26
+    name: GRCh38
+    seq_rpt: data/GRCh38.assembly.txt
+    align_rpt: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/GCF_000001405.26-haplotype_0.report"
+params:
+  exclude_mt: yes
+  make_bed: yes
+output_files:
+  #set file name to no to exclude
+  assm1:
+    stats: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/stats/NA12878_hap0-GRCh38_alignment_stats.txt"
+    top_ten: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/stats/NA12878_hap0-GRCh38_top_ten.txt"
+    no_hit_bed: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/bed/NA12878_hap0-GRCh38_no_hit.bed"
+    ungap_nohit_bed: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/bed/NA12878_hap0-GRCh38_ungap_no_hit.bed"
+    collapse_bed: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/bed/NA12878_hap0-GRCh38_collapse.bed" #sp- both paralogous and allelic for now
+    expand_bed: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/bed/NA12878_hap0-GRCh38_expansion.bed"
+    inv_bed: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/bed/NA12878_hap0-GRCh38_inv.bed"
+    mix_bed: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/bed/NA12878_hap0-GRCh38_mix.bed"
+  assm2:
+    stats: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/stats/GRCh38-NA12878_hap0-alignment_stats.txt"
+    top_ten: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/stats/GRCh38-NA12878_hap0_top_ten.txt"
+    ungap_nohit_bed: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/bed/GRCh38-NA12878_hap0_ungap_nohit.bed"
+    no_hit_bed: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/bed/GRCh38-NA12878_hap0_no_hit.bed"
+    collapse_bed: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/bed/GRCh38-NA12878_hap0_collapse.bed" #sp- both paralogous and allelic for now
+    expand_bed: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/bed/GRCh38-NA12878_hap0_expansion.bed"
+    inv_bed: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/bed/GRCh38-NA12878_hap0_inv.bed"
+    mix_bed: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/bed/GRCh38-NA12878_hap0_mix.bed"
+  comp_img:
+    both_collapse: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/img/NA12878_hap0-GRCh38_collapse.png"
+    both_expand: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/img/NA12878_hap0-GRCh38_expand.png"
+    both_nohit: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/img/NA12878_hap0-GRCh38_no_hit.png"
+    both_ungap_nohit: "/Users/deanna.church/Box Sync/analysis/assembly/ncbi/2016-04-18/assm_assm/img/NA12878_hap0-GRCh38_ungap_no_hit.png"

@@ -1,6 +1,7 @@
 %YAML 1.2
 ---
 #define assm1 and assm2 input files and info here.
+# if there are not assembly accessions, use NOACC_name
 input_files:
   assm1:
     acc: GCF_000001405.13

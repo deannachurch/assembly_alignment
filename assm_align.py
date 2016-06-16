@@ -17,7 +17,7 @@ from pybedtools import BedTool
 import subprocess
 import numpy as np
 import matplotlib.pylab as plt
-import seaborn as sns
+plt.style.use('ggplot')
 import os
 import sys
 import logging
@@ -96,6 +96,8 @@ def parseAlignReport(fi, assm_name, obj_dict):
 							sys.exit(3)
 					if line[0].startswith('Sequence Name:'):
 						seq_name = line[0].split(':')[1].lstrip()
+					if line[0].startswith('Sequence ID:'):
+						seq_id = line[0].split(':')[1].lstrip()
 				else:
 					#data lines
 					#print line
@@ -104,8 +106,12 @@ def parseAlignReport(fi, assm_name, obj_dict):
 					end = int(line[2])
 					gap_len = int(line[3])
 					ungap_len = int(line[5])
+					if not seq_name:
+						seq_name=seq_id.split('.')[-1]
 					loc="%s:%d-%d" % (seq_name, start, end)
 					#can count no hit locs because there should be no overlap
+					##this is a kludge to deal with NCBI not creating sequence report so that the sequence name
+					##in the report file is blank :(
 					if data_type == "NoHit":
 						gap_no_hit[seq_name] += gap_len
 						ungap_no_hit[seq_name] += ungap_len
@@ -126,43 +132,48 @@ def parseAlignReport(fi, assm_name, obj_dict):
 	except IOError:
 		logging.critical("Can't open %s" % fi)
 		sys.exit(2)
+	logging.info("Processed alignment report file")
 	#set alignment attribute information for seq_object
+	line_ct=0
 	for seq in obj_dict:
+		if line_ct%100 == 0:
+			print "Lines processed: %d" % line_ct
 		if not seq in gap_no_hit:
-			logging.debug("Seq has no NoHit %s: %s" % (assm_name, seq))
+			#logging.debug("Seq has no NoHit %s: %s" % (assm_name, seq))
 			obj_dict[seq].set_nohit(0, 0, [], [])
 		else:
 			uniq_no_hit_loc=mergeLoc(no_hit_loc[seq])
 			uniq_ungap_no_hit_loc=mergeLoc(ungap_no_hit_loc[seq])
 			obj_dict[seq].set_nohit(gap_no_hit[seq], ungap_no_hit[seq], uniq_no_hit_loc, uniq_ungap_no_hit_loc)
 		if not seq in sp_loc:
-			logging.debug("Seq has no SP %s: %s" % (assm_name, seq))
+			#logging.debug("Seq has no SP %s: %s" % (assm_name, seq))
 			obj_dict[seq].set_sp(0, [])
 		else:
 			sp_uniq_loc=mergeLoc(sp_loc[seq])
 			sp_len=getLength(sp_uniq_loc)
 			obj_dict[seq].set_sp(sp_len[seq], sp_uniq_loc)
 		if not seq in sp_only_loc:
-			logging.debug("Seq has no SP Only %s: %s" % (assm_name, seq))
+			#logging.debug("Seq has no SP Only %s: %s" % (assm_name, seq))
 			obj_dict[seq].set_sp_only(0, [])
 		else:
 			sp_only_uniq_loc=mergeLoc(sp_only_loc[seq])
 			sp_only_len=getLength(sp_only_uniq_loc)
 			obj_dict[seq].set_sp_only(sp_only_len[seq], sp_only_uniq_loc)
 		if not seq in inv_loc:
-			logging.debug("Seq has no INV data: %s: %s" % (assm_name, seq))
+			#logging.debug("Seq has no INV data: %s: %s" % (assm_name, seq))
 			obj_dict[seq].set_inv(0,[])
 		else:
 			inv_uniq_loc=mergeLoc(inv_loc[seq])
 			inv_len=getLength(inv_uniq_loc)
 			obj_dict[seq].set_inv(inv_len[seq], inv_uniq_loc)
 		if not seq in mix_loc:
-			logging.debug("Seq has no Mix data: %s: %s" % (assm_name, seq))
+			#logging.debug("Seq has no Mix data: %s: %s" % (assm_name, seq))
 			obj_dict[seq].set_mix(0,[])
 		else:
 			mix_uniq_loc=mergeLoc(mix_loc[seq])
 			mix_len=getLength(mix_uniq_loc)
 			obj_dict[seq].set_mix(mix_len[seq], mix_uniq_loc)
+		line_ct += 1
 
 
 def parseSeqRep(fi, assm_name, assm_acc, chrom_list, exclude_mt):
@@ -174,27 +185,30 @@ def parseSeqRep(fi, assm_name, assm_acc, chrom_list, exclude_mt):
 			for line in data:
 				if line[0].startswith("# Assembly Name:"):
 					if assm_name not in line[0]:
-						logging.critical("Wrong report, assembly name mismatch: %s\t%s" % (assm_name, line[0]))
+						logging.warning("Wrong report, assembly name mismatch: %s\t%s" % (assm_name, line[0]))
 			 	if not line[0].startswith("#"):
-			 		rec = Seq()
-			 		rec.assm=assm_name
-			 		rec.name=line[0]
-			 		rec.ref_acc=assm_acc
-			 		rec.length=int(line[8])
-			 		rec.role=line[1]
-			 		rec.assm_unit=line[7]
-			 		assm_list[line[0]]=rec
-			 		if exclude_mt == True:
-			 			if line[1] == 'assembled-molecule' and line[7] == "Primary Assembly":
-			 				chrom_list.append(line[0])
-			 		else:
-			 			if line[1] == 'assembled-molecule':
-			 				chrom_list.append(line[0])
+					#only take thanks >10kb
+					#should make this an optional value in config
+					if int(line[8]) > 10000:
+			 			rec = Seq()
+			 			rec.assm=assm_name
+			 			rec.name=line[0]
+			 			rec.ref_acc=assm_acc
+			 			rec.length=int(line[8])
+			 			rec.role=line[1]
+			 			rec.assm_unit=line[7]
+			 			assm_list[line[0]]=rec
+			 			if exclude_mt == True:
+			 				if line[1] == 'assembled-molecule' and line[7] == "Primary Assembly":
+			 					chrom_list.append(line[0])
+			 			else:
+			 				if line[1] == 'assembled-molecule':
+			 					chrom_list.append(line[0])
 
 	except IOError:
 		logging.critical("Can't open %s" % fi)
 		sys.exit(1)
-
+	print len(assm_list)
 	return assm_list
 
 class Seq(object):
@@ -380,8 +394,8 @@ def makeBarGraph(assm1_chrom_list, assm1_dict, assm1_name, assm2_chrom_list, ass
 			logging.error("Unknown data type, not making image: %s" % data_type)
 			return
 	#set up plot
-	sns.set_style("ticks")
-	sns.set_context("talk")
+	#sns.set_style("ticks")
+	#sns.set_context("talk")
 	plt.figure(figsize=(20,10), dpi=100)
 	ax = plt.gca()
 	ax.get_xaxis().get_major_formatter().set_scientific(False)
@@ -397,7 +411,7 @@ def makeBarGraph(assm1_chrom_list, assm1_dict, assm1_name, assm2_chrom_list, ass
 	plt.ylabel('number of bases', size='36')
 	plt.title(title, size='36')
 	plt.legend(loc='upper left', prop={'size':24})
-	sns.despine(top=True, right=True)
+	#sns.despine(top=True, right=True)
 	plt.savefig(out_fi, dpi=100)
 
 def main():
