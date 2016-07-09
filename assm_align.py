@@ -267,7 +267,7 @@ def writeTopTen(fh, assm1, assm2, assm_dict):
 	fh.write("\n##SP\n")
 	writeTopTenLine(fh, sort_sp_ten)
 	#sp_only
-	sort_sp_only=sorted(sp, key=lambda x: x[3], reverse=True)
+	sort_sp_only=sorted(sp_only, key=lambda x: x[3], reverse=True)
 	sort_sp_only_ten=sort_sp_only[:10]
 	fh.write("\n##SP_only\n")
 	writeTopTenLine(fh, sort_sp_only_ten)
